@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  employee
+}
+
+enum AttendanceStatus {
+  PRESENT
+  HALF_DAY
+  ABSENT
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String
+  role          Role     @default(employee)
+  department    String
+  dateOfJoining DateTime
+  salary        Float
+  leaveBalance  Int      @default(5)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  attendances Attendance[]
+  leaves      Leave[]
+  salaries    Salary[]
+  approvedLeaves Leave[] @relation("ApprovedBy")
+
+  @@map("users")
+}
+
+model Attendance {
+  id        String           @id @default(cuid())
+  userId    String
+  date      DateTime
+  checkIn   DateTime
+  checkOut  DateTime?
+  workHours Float            @default(0)
+  status    AttendanceStatus @default(ABSENT)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("attendances")
+}
+
+model Leave {
+  id              String      @id @default(cuid())
+  userId          String
+  fromDate        DateTime
+  toDate          DateTime
+  totalDays       Int
+  reason          String
+  status          LeaveStatus @default(PENDING)
+  paidDays        Int         @default(0)
+  unpaidDays      Int         @default(0)
+  approvedBy      String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  approver User? @relation("ApprovedBy", fields: [approvedBy], references: [id])
+
+  @@map("leaves")
+}
+
+model Salary {
+  id                   String   @id @default(cuid())
+  userId               String
+  month                String   // Format: YYYY-MM
+  year                 Int
+  baseSalary           Float
+  workingDays          Int
+  presentDays          Int      @default(0)
+  halfDays             Int      @default(0)
+  absentDays           Int      @default(0)
+  attendancePercentage Float    @default(0)
+  salaryDeduction      Float    @default(0)
+  finalSalary          Float
+  isProcessed          Boolean  @default(false)
+  processedAt          DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@map("salaries")
+}
