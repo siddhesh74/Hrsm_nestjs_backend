@@ -35,6 +35,8 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProfile(@CurrentUser() user: User) {
-    return this.authService.getProfile(user.id);
+    // User is already validated and retrieved by JWT guard, no need for another DB call
+    const { password, ...result } = user;
+    return result;
   }
 }
